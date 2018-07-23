@@ -15,7 +15,7 @@ class bitcoin():
         msg = s_message("version", m_version(1).tobytes())
         self.send(msg)
 
-        for i in range(15):
+        for i in range(5):
             data = self.sock.recv(4096)
             self.on_recv(data)
 
@@ -58,7 +58,8 @@ class bitcoin():
                     return
 
                 payload = globals()[clsname].load(msg.payload)
-                payload.debug()
+                if config.debug_enabled:
+                    payload.debug()
                 return handler(payload)
         lib.err("unknown command: <{}>".format(msg.command))
 
@@ -67,7 +68,8 @@ class bitcoin():
         self.send(msg)
 
     def handle_verack(self, payload):
-        # do nothing
+        #msg = s_message("getaddr", m_getaddr().tobytes())
+        #self.send(msg)
         pass
 
     def handle_addr(self, payload):

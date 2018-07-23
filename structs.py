@@ -38,7 +38,7 @@ class s_message:
             self.length, self.checksum, self.payload)
 
 
-class s_varint:
+class s_var_int:
     def __init__(self, value):
         self.value = value
 
@@ -59,19 +59,66 @@ class s_varint:
         elif n == 0xFF:
             (value, ) = struct.unpack("<Q", data[1:9])
             size = 9
-        return (s_varint(value), size)
+        return (s_var_int(value), size)
 
     def tobytes(self):
         pass # TODO:
 
-class s_varstr:
-    pass
+class s_var_str:
+    def __init__(self, length, string):
+        self.length = length
+        self.string = string
 
-class s_netaddr:
-    pass
+    @staticmethod
+    def load(data):
+        (varint, size) = s_var_int.load(data)
+        data = data[size:]
+        string = data[:varint.value]
+        return (s_var_str(varint.value, string), size + varint.value)
+
+    def tobytes(self):
+        pass
+
+    def __str__(self):
+        return "{}({})".format(self.string, self.length)
+
+class s_net_addr:
+    def __init__(self, time, services, ip, port):
+        self.time = time
+        self.services = services
+        self.ip = ip
+        self.port = port
+
+    @staticmethod
+    def load(data, from_version = False):
+        size = 30
+        time = 0
+        if from_version:
+            size = 26
+            (services, ip, port) = struct.unpack("<Q16sH", data[:size])
+        else:
+            (time, services, ip, port) = struct.unpack("<IQ16sH", data[:size])
+        return (s_net_addr(time, services, ip, port), size)
+
+    def tobytes(self, to_version = False):
+        if to_version:
+            return struct.pack("<Q16sH", self.services, self.ip, self.port)
+        else:
+            return struct.pack("<IQ16sH", self.time, self.services, self.ip, self.port)
 
 class s_inv_vect:
-    pass
+    def __init__(self, type, hash):
+        self.type = type
+        self.hash = hash
+
+    @staticmethod
+    def load(data):
+        size = 36
+        (type, hash) = struct.unpack("<I32s", data[:size])
+        return (s_inv_vect(type, hash), size)
+
+    def tobytes(self):
+        pass
 
 class s_blockheaders:
     pass

@@ -1,5 +1,6 @@
 # coding=utf-8
 
+import socket
 import struct
 import time
 import config
@@ -66,7 +67,8 @@ class m_ping:
     @staticmethod
     def load(data):
         ret = m_ping()
-        (ret.nonce, ) = struct.unpack("<Q", data)
+        if len(data) == 8:
+            (ret.nonce, ) = struct.unpack("<Q", data)
         return ret
 
     def debug(self):
@@ -88,6 +90,20 @@ class m_pong:
     def debug(self):
         lib.debug("<pong>\nnonce: {}\n".format(self.nonce))
 
+class m_getaddr:
+    def __init__(self):
+        pass
+
+    def tobytes(self):
+        return b""
+
+    @staticmethod
+    def load(data):
+        return m_getaddr()
+
+    def debug(self):
+        lib.debug("<getaddr> no extra data\n")
+
 class m_addr:
     def __init__(self, addr_list):
         self.addr_list = addr_list
@@ -97,20 +113,21 @@ class m_addr:
 
     @staticmethod
     def load(data):
-        (varint, size) = s_varint.load(data)
+        (varint, size) = s_var_int.load(data)
         data = data[size:]
         count = varint.value
 
         addr_list = []
         for i in range(count):
-            entry = struct.unpack("<I26s", data)
-            addr_list.append(entry)
+            (addr, size) = s_net_addr.load(data)
+            data = data[size:]
+            addr_list.append(addr)
         return m_addr(addr_list)
 
     def debug(self):
         s = "<addr>\ncount:{}\n".format(len(self.addr_list))
-        for (i, entry) in enumerate(self.addr_list):
-            s += "{}:\ttimestamp:{}, addr:{}\n".format(i, entry[0], entry[1])
+        for (i, addr) in enumerate(self.addr_list):
+            s += "{}:\ttime:{}, services:{}, ip:{}, port:{}\n".format(i, addr.time, addr.services, socket.inet_ntoa(addr.ip[-4:]), addr.port)
         lib.debug(s)
 
 class m_getheaders:
@@ -127,7 +144,7 @@ class m_getheaders:
         (version, ) = struct.unpack("<I", data[:4])
         data = data[4:]
 
-        (varint, size) = s_varint.load(data)
+        (varint, size) = s_var_int.load(data)
         count = varint.value
         data = data[size:]
 
@@ -144,3 +161,82 @@ class m_getheaders:
         s += "hash stop: "
         s += str(self.stop)
         lib.debug(s)
+
+class m_inv:
+    def __init__(self, inventory):
+        self.inventory = inventory
+
+    def tobytes(self):
+        pass
+
+    @staticmethod
+    def load(data):
+        (varint, size) = s_var_int.load(data)
+        data = data[size:]
+
+        inventory = []
+        for i in range(varint.value):
+            (iv, size) = s_inv_vect.load(data)
+            data = data[size:]
+            inventory.append(iv)
+        return m_inv(inventory)
+
+    def debug(self):
+        s = "<inv>\ncount:{}\n".format(len(self.inventory))
+        for (i, iv) in enumerate(self.inventory):
+            s += "{}:\t{}\t{}\n".format(i, iv.type, iv.hash)
+        lib.debug(s)
+
+class m_sendheaders:
+    def __init__(self):
+        pass
+
+    def tobytes(self):
+        return b""
+
+    @staticmethod
+    def load(data):
+        return m_sendheaders()
+
+    def debug(self):
+        lib.debug("<sendheaders> no extra data\n")
+
+class m_sendcmpct:
+    def __init__(self, n1, n2):
+        self.n1 = n1
+        self.n2 = n2
+
+    def tobytes(self):
+        pass
+
+    @staticmethod
+    def load(data):
+        (n1, n2) = struct.unpack("<BQ", data)
+        return m_sendcmpct(n1, n2)
+
+    def debug(self):
+        lib.debug("<sendcmpct>\nn1: {}\nn2:{}\n".format(self.n1, self.n2))
+
+class m_reject:
+    def __init__(self, message, ccode, reason, data):
+        self.message = message
+        self.ccode = ccode
+        self.reason = reason
+        self.data = data
+
+    def tobytes(self):
+        pass
+
+    @staticmethod
+    def load(data):
+        (message, size) = s_var_str.load(data)
+        data = data[size:]
+
+        (ccode, ) = struct.unpack("<B", data[:1])
+
+        (reason, size) = s_var_str.load(data)
+        data = data[size:]
+        return m_reject(message, ccode, reason, data)
+
+    def debug(self):
+        lib.debug("<reject>\nmessage:{}\nccode:{}\nreason:{}\ndata:{}\n".format(self.message, self.ccode, self.reason, self.data))

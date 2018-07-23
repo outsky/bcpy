@@ -1,6 +1,7 @@
 # coding=utf-8
 
 import random
+import config
 
 def printb(bs):
     col = 0
@@ -23,6 +24,8 @@ def info(s):
 	print("{}".format(s))
 
 def debug(s):
+	if not config.debug_enabled:
+		return
 	print("[dbg] {}".format(s))
 
 def random64():
