@@ -28,7 +28,7 @@ class s_message:
         command = command.decode("utf-8")
         msg = s_message(command, payload, magic)
         if checksum != msg.checksum:
-            lib.err("<{}> checksum failed: {}, {}".format(command, checksum, msg.checksum))
+            lib.err("<{}> checksum failed: {}, {}", command, checksum, msg.checksum)
 
         return (msg, data, None)
 

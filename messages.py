@@ -37,8 +37,8 @@ class m_version:
         return ret
         
     def debug(self):
-        lib.debug("<version>\nversion:{}\nservices:{}\ntimestamp:{}\nnonce:{}\nuser agent:{}\nstart height:{}\nrelay:{}\n".format(self.version,
-            self.services, self.timestamp, self.nonce, self.user_agent, self.start_height, self.relay))
+        lib.debug("<version>\nversion:{}\nservices:{}\ntimestamp:{}\nnonce:{}\nuser agent:{}\nstart height:{}\nrelay:{}\n", self.version,
+            self.services, self.timestamp, self.nonce, self.user_agent, self.start_height, self.relay)
 
 
 class m_verack:
@@ -70,7 +70,7 @@ class m_ping:
         return ret
 
     def debug(self):
-        lib.debug("<ping>\nnonce: {}\n".format(self.nonce))
+        lib.debug("<ping>\nnonce: {}\n", self.nonce)
 
 class m_pong:
     def __init__(self, nonce):
@@ -86,7 +86,7 @@ class m_pong:
         return ret
 
     def debug(self):
-        lib.debug("<pong>\nnonce: {}\n".format(self.nonce))
+        lib.debug("<pong>\nnonce: {}\n", self.nonce)
 
 class m_getaddr:
     def __init__(self):
@@ -213,7 +213,7 @@ class m_sendcmpct:
         return m_sendcmpct(n1, n2)
 
     def debug(self):
-        lib.debug("<sendcmpct>\nn1: {}\nn2:{}\n".format(self.n1, self.n2))
+        lib.debug("<sendcmpct>\nn1: {}\nn2:{}\n", self.n1, self.n2)
 
 class m_reject:
     def __init__(self, message, ccode, reason, data):
@@ -237,7 +237,7 @@ class m_reject:
         return m_reject(message, ccode, reason, data)
 
     def debug(self):
-        lib.debug("<reject>\nmessage:{}\nccode:{}\nreason:{}\ndata:{}\n".format(self.message, self.ccode, self.reason, self.data))
+        lib.debug("<reject>\nmessage:{}\nccode:{}\nreason:{}\ndata:{}\n", self.message, self.ccode, self.reason, self.data)
 
 class m_feefilter:
     def __init__(self, feerate):
@@ -252,4 +252,4 @@ class m_feefilter:
         return m_feefilter(feerate)
 
     def debug(self):
-        lib.debug("<feefilter>\nfeerate:{}\n".format(self.feerate))
+        lib.debug("<feefilter>\nfeerate:{}\n", self.feerate)

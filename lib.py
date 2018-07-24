@@ -15,16 +15,27 @@ def printb(bs):
             print(" ", end = '')
     print("")
 
-def err(s):
-	print("[x] {}".format(s))
+def err(fmt, *args):
+	fmt = "[x] " + fmt
+	if not args:
+		print(fmt)
+	else:
+		print(fmt.format(*args))
 
-def info(s):
-	print("{}".format(s))
+def info(fmt, *args):
+	if not args:
+		print(fmt)
+	else:
+		print(fmt.format(*args))
 
-def debug(s):
+def debug(fmt, *args):
 	if not config.debug_enabled:
 		return
-	print("[dbg] {}".format(s))
+	fmt = "[dbg] " + fmt
+	if not args:
+		print(fmt)
+	else:
+		print(fmt.format(*args))
 
 def random64():
 	return random.randint(1, 1000000000)
