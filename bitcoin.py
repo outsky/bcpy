@@ -5,11 +5,11 @@ from structs import *
 from messages import *
 import lib
 
-class node:
+class Node:
     def __init__(self, sock):
         self.sock = sock
 
-class bitcoin:
+class BitCoin:
     def __init__(self):
         self.nodes = {}
 
@@ -24,7 +24,7 @@ class bitcoin:
         conn.setblocking(False)
         self.sel.register(conn, selectors.EVENT_READ, self.sock_read)
         fd = conn.fileno()
-        self.nodes[fd] = node(conn)
+        self.nodes[fd] = Node(conn)
         lib.info("new connection: {}({})", addr, fd)
 
     def sock_read(self, sock):
@@ -41,9 +41,9 @@ class bitcoin:
         sock = socket.create_connection(addr)
         self.sel.register(sock, selectors.EVENT_READ, self.sock_read)
         fd = sock.fileno()
-        self.nodes[fd] = node(sock)
+        self.nodes[fd] = Node(sock)
         lib.info("connect to: {}({})", addr, fd)
-        msg = s_message("version", m_version(0).tobytes())
+        msg = Message("version", Version(0).tobytes())
         self.send(fd, msg)
 
     def sock_listen(self, port):
@@ -67,7 +67,7 @@ class bitcoin:
         while True:
             if not data or len(data) <= 0:
                 break
-            (msg, data, self.slicedmsg) = s_message.load(data)
+            (msg, data, self.slicedmsg) = Message.load(data)
             if not msg:
                 break
             self.handle(fd, msg)
@@ -79,125 +79,129 @@ class bitcoin:
         lib.info("-> {}:{}/{}", msg.command, sent, len(data))
 
     def handle(self, fd, msg):
-        msgtypes = ["version", "verack", "addr", "inv", "getdata", "notfound", "getblocks",
-            "getheaders", "tx", "block", "headers", "getaddr", "mempool", "checkorder",
-            "submitorder", "reply", "ping", "pong", "reject", "filterload", "fileteradd",
-            "filterclear", "merkleblock", "alert", "sendheaders", "feefilter", "sendcmpct",
-            "cmpctblock", "getblocktxn", "blocktxn"]
+        msgtypes = {"version": "Version", "verack": "VerAck", "addr": "Addr", "inv": "Inv", 
+            "getdata": "GetData", "notfound": "NotFound", "getblocks": "GetBlocks",
+            "getheaders": "GetHeaders", "tx": "Tx", "block": "Block", "headers": "Headers",
+            "getaddr": "GetAddr", "mempool": "MemPool", "checkorder": "CheckOrder",
+            "submitorder": "SubmitOrder", "reply": "Reply", "ping": "Ping", "pong": "Pong",
+            "reject": "Reject", "filterload": "FilterLoad", "fileteradd": "FilterAdd",
+            "filterclear": "FilterClear", "merkleblock": "MerkleBlock", "alert": "Alert",
+            "sendheaders": "SendHeaders", "feefilter": "FeeFilter", "sendcmpct": "SendCmpct",
+            "cmpctblock": "CmpctBlock", "getblocktxn": "GetBlockTxn", "blocktxn": "BlockTxn"}
 
-        found = False
-        for t in msgtypes:
-            if msg.command[:len(t)] == t:
-                found = True
-                handler = getattr(self, "handle_" + t, None)
-                if not handler:
-                    lib.err("no handler for <{}>", t)
-                    return
-                lib.info("<- <{}>", t)
+        cmd = msg.command
+        if cmd not in msgtypes:
+            lib.err("unknown command: <{}>({})", cmd, cmd.encode("utf-8"))
+            return
 
-                clsname = "m_" + t
-                if clsname not in globals():
-                    lib.err("no class for <{}>", t)
-                    return
+        clsname = msgtypes[cmd]
+        handler = getattr(self, "On" + clsname, None)
+        if not handler:
+            lib.err("no handler for <{}, {}>", cmd, clsname)
+            return
+        lib.info("<- <{}>", cmd)
 
-                payload = globals()[clsname].load(msg.payload)
-                if config.debug_enabled:
-                    payload.debug()
-                return handler(fd, payload)
-        lib.err("unknown command: <{}>", msg.command)
+        if clsname not in globals():
+            lib.err("no class for <{}, {}>", cmd, clsname)
+            return
 
-    def handle_version(self, fd, payload):
-        msg = s_message("verack", m_verack().tobytes())
+        payload = globals()[clsname].load(msg.payload)
+        if config.debug_enabled:
+            payload.debug()
+        return handler(fd, payload)
+
+    def OnVersion(self, fd, payload):
+        msg = Message("verack", VerAck().tobytes())
         self.send(fd, msg)
 
-    def handle_verack(self, fd, payload):
-        #msg = s_message("getaddr", m_getaddr().tobytes())
+    def OnVerAck(self, fd, payload):
+        #msg = Message("getaddr", GetAddr().tobytes())
         #self.send(fd, msg)
         pass
 
-    def handle_addr(self, fd, payload):
+    def OnAddr(self, fd, payload):
         # do nothing
         pass
 
-    def handle_inv(self, fd, payload):
+    def OnInv(self, fd, payload):
         pass
 
-    def handle_getdata(self, fd, payload):
+    def OnGetData(self, fd, payload):
         pass
 
-    def handle_notfound(self, fd, payload):
+    def OnNotFound(self, fd, payload):
         pass
 
-    def handle_getblocks(self, fd, payload):
+    def OnGetBlocks(self, fd, payload):
         pass
 
-    def handle_getheaders(self, fd, payload):
+    def OnGetHeaders(self, fd, payload):
         # do nothing
         pass
 
-    def handle_tx(self, fd, payload):
+    def OnTx(self, fd, payload):
         pass
 
-    def handle_block(self, fd, payload):
+    def OnBlock(self, fd, payload):
         pass
 
-    def handle_headers(self, fd, payload):
+    def OnHeaders(self, fd, payload):
         pass
 
-    def handle_getaddr(self, fd, payload):
+    def OnGetAddr(self, fd, payload):
         pass
  
-    def handle_mempool(self, fd, payload):
+    def OnMemPool(self, fd, payload):
         pass
 
-    def handle_checkorder(self, fd, payload):
+    def OnCheckOrder(self, fd, payload):
         pass
 
-    def handle_submitorder(self, fd, payload):
+    def OnSubmitOrder(self, fd, payload):
         pass
 
-    def handle_reply(self, fd, payload):
+    def OnReply(self, fd, payload):
         pass
 
-    def handle_ping(self, fd, payload):
-        msg = s_message("pong", m_pong(payload.nonce).tobytes())
+    def OnPing(self, fd, payload):
+        msg = Message("pong", Pong(payload.nonce).tobytes())
         self.send(fd, msg)
 
-    def handle_pong(self, fd, payload):
+    def OnPong(self, fd, payload):
         pass
 
-    def handle_reject(self, fd, payload):
+    def OnReject(self, fd, payload):
         pass
 
-    def handle_filterload(self, fd, payload):
+    def OnFilterLoad(self, fd, payload):
         pass
 
-    def handle_fileteradd(self, fd, payload):
+    def OnFileterAdd(self, fd, payload):
         pass
 
-    def handle_filterclear(self, fd, payload):
+    def OnFilterClear(self, fd, payload):
         pass
 
-    def handle_merkleblock(self, fd, payload):
+    def OnMerkleBlock(self, fd, payload):
         pass
 
-    def handle_alert(self, fd, payload):
+    def OnAlert(self, fd, payload):
         pass
 
-    def handle_sendheaders(self, fd, payload):
+    def OnSendHeaders(self, fd, payload):
         pass
 
-    def handle_feefilter(self, fd, payload):
+    def OnFeeFilter(self, fd, payload):
         pass
 
-    def handle_sendcmpct(self, fd, payload):
+    def OnSendCmpct(self, fd, payload):
         pass
 
-    def handle_cmpctblock(self, fd, payload):
+    def OnCmpctBlock(self, fd, payload):
         pass
 
-    def handle_getblocktxn(self, fd, payload):
+    def OnGetBlockTxn(self, fd, payload):
         pass
 
-    def handle_blocktxn(self, fd, payload):
+    def OnBlockTxn(self, fd, payload):
         pass

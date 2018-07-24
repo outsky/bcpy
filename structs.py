@@ -3,7 +3,7 @@ import lib
 import struct
 import hashlib
 
-class s_message:
+class Message:
     def __init__(self, command, payload, magic = config.magic):
         self.magic = magic
         self.command = command
@@ -25,8 +25,8 @@ class s_message:
         payload = data[:length]
         data = data[length:]
 
-        command = command.decode("utf-8")
-        msg = s_message(command, payload, magic)
+        command = command.decode("utf-8").rstrip(b'\x00'.decode("utf-8"))
+        msg = Message(command, payload, magic)
         if checksum != msg.checksum:
             lib.err("<{}> checksum failed: {}, {}", command, checksum, msg.checksum)
 
@@ -37,7 +37,7 @@ class s_message:
             self.length, self.checksum, self.payload)
 
 
-class s_var_int:
+class VarInt:
     def __init__(self, value):
         self.value = value
 
@@ -58,22 +58,22 @@ class s_var_int:
         elif n == 0xFF:
             (value, ) = struct.unpack("<Q", data[1:9])
             size = 9
-        return (s_var_int(value), size)
+        return (VarInt(value), size)
 
     def tobytes(self):
         pass # TODO:
 
-class s_var_str:
+class VarStr:
     def __init__(self, length, string):
         self.length = length
         self.string = string
 
     @staticmethod
     def load(data):
-        (varint, size) = s_var_int.load(data)
+        (varint, size) = VarInt.load(data)
         data = data[size:]
         string = data[:varint.value]
-        return (s_var_str(varint.value, string), size + varint.value)
+        return (VarStr(varint.value, string), size + varint.value)
 
     def tobytes(self):
         pass
@@ -81,7 +81,7 @@ class s_var_str:
     def __str__(self):
         return "{}({})".format(self.string, self.length)
 
-class s_net_addr:
+class NetAddr:
     def __init__(self, time, services, ip, port):
         self.time = time
         self.services = services
@@ -97,7 +97,7 @@ class s_net_addr:
             (services, ip, port) = struct.unpack("<Q16sH", data[:size])
         else:
             (time, services, ip, port) = struct.unpack("<IQ16sH", data[:size])
-        return (s_net_addr(time, services, ip, port), size)
+        return (NetAddr(time, services, ip, port), size)
 
     def tobytes(self, to_version = False):
         if to_version:
@@ -105,7 +105,7 @@ class s_net_addr:
         else:
             return struct.pack("<IQ16sH", self.time, self.services, self.ip, self.port)
 
-class s_inv_vect:
+class InvVect:
     def __init__(self, type, hash):
         self.type = type
         self.hash = hash
@@ -114,11 +114,11 @@ class s_inv_vect:
     def load(data):
         size = 36
         (type, hash) = struct.unpack("<I32s", data[:size])
-        return (s_inv_vect(type, hash), size)
+        return (InvVect(type, hash), size)
 
     def tobytes(self):
         pass
 
-class s_blockheaders:
+class BlockHeaders:
     pass
 

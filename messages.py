@@ -5,7 +5,7 @@ import config
 import lib
 from structs import *
 
-class m_version:
+class Version:
     def __init__(self, start_height):
         self.version = config.version
         self.services = config.services
@@ -23,7 +23,7 @@ class m_version:
 
     @staticmethod
     def load(data):
-        ret = m_version(0)
+        ret = Version(0)
         common = data[:46]
         data = data[46:]
         (ret.version, ret.services, ret.timestamp, ret.addr_recv) = struct.unpack("<iQq26s", common)
@@ -41,7 +41,7 @@ class m_version:
             self.services, self.timestamp, self.nonce, self.user_agent, self.start_height, self.relay)
 
 
-class m_verack:
+class VerAck:
     def __init__(self):
         pass
 
@@ -50,12 +50,12 @@ class m_verack:
 
     @staticmethod
     def load(data):
-        return m_verack()
+        return VerAck()
 
     def debug(self):
         lib.debug("<verack> no extra data\n")
 
-class m_ping:
+class Ping:
     def __init__(self):
         self.nonce = lib.random64()
 
@@ -64,7 +64,7 @@ class m_ping:
 
     @staticmethod
     def load(data):
-        ret = m_ping()
+        ret = Ping()
         if len(data) == 8:
             (ret.nonce, ) = struct.unpack("<Q", data)
         return ret
@@ -72,7 +72,7 @@ class m_ping:
     def debug(self):
         lib.debug("<ping>\nnonce: {}\n", self.nonce)
 
-class m_pong:
+class Pong:
     def __init__(self, nonce):
         self.nonce = nonce
 
@@ -81,14 +81,14 @@ class m_pong:
 
     @staticmethod
     def load(data):
-        ret = m_pong()
+        ret = Pong()
         (ret.nonce, ) = struct.unpack("<Q", data)
         return ret
 
     def debug(self):
         lib.debug("<pong>\nnonce: {}\n", self.nonce)
 
-class m_getaddr:
+class GetAddr:
     def __init__(self):
         pass
 
@@ -97,12 +97,12 @@ class m_getaddr:
 
     @staticmethod
     def load(data):
-        return m_getaddr()
+        return GetAddr()
 
     def debug(self):
         lib.debug("<getaddr> no extra data\n")
 
-class m_addr:
+class Addr:
     def __init__(self, addr_list):
         self.addr_list = addr_list
 
@@ -111,16 +111,16 @@ class m_addr:
 
     @staticmethod
     def load(data):
-        (varint, size) = s_var_int.load(data)
+        (varint, size) = VarInt.load(data)
         data = data[size:]
         count = varint.value
 
         addr_list = []
         for i in range(count):
-            (addr, size) = s_net_addr.load(data)
+            (addr, size) = NetAddr.load(data)
             data = data[size:]
             addr_list.append(addr)
-        return m_addr(addr_list)
+        return Addr(addr_list)
 
     def debug(self):
         s = "<addr>\ncount:{}\n".format(len(self.addr_list))
@@ -128,7 +128,7 @@ class m_addr:
             s += "{}:\ttime:{}, services:{}, ip:{}, port:{}\n".format(i, addr.time, addr.services, socket.inet_ntoa(addr.ip[-4:]), addr.port)
         lib.debug(s)
 
-class m_getheaders:
+class GetHeaders:
     def __init__(self, locators, stop):
         self.version = config.version
         self.locators = locators
@@ -142,7 +142,7 @@ class m_getheaders:
         (version, ) = struct.unpack("<I", data[:4])
         data = data[4:]
 
-        (varint, size) = s_var_int.load(data)
+        (varint, size) = VarInt.load(data)
         count = varint.value
         data = data[size:]
 
@@ -150,7 +150,7 @@ class m_getheaders:
         for i in range(count):
             locators.append(data[:32])
             data = data[32:]
-        return m_getheaders(locators, data[:32])
+        return GetHeaders(locators, data[:32])
 
     def debug(self):
         s = "<getheaders>\nversion:{}\nlocator hash count:{}\n".format(self.version, len(self.locators))
@@ -160,7 +160,7 @@ class m_getheaders:
         s += str(self.stop)
         lib.debug(s)
 
-class m_inv:
+class Inv:
     def __init__(self, inventory):
         self.inventory = inventory
 
@@ -169,15 +169,15 @@ class m_inv:
 
     @staticmethod
     def load(data):
-        (varint, size) = s_var_int.load(data)
+        (varint, size) = VarInt.load(data)
         data = data[size:]
 
         inventory = []
         for i in range(varint.value):
-            (iv, size) = s_inv_vect.load(data)
+            (iv, size) = InvVect.load(data)
             data = data[size:]
             inventory.append(iv)
-        return m_inv(inventory)
+        return Inv(inventory)
 
     def debug(self):
         s = "<inv>\ncount:{}\n".format(len(self.inventory))
@@ -185,7 +185,7 @@ class m_inv:
             s += "{}:\t{}\t{}\n".format(i, iv.type, iv.hash)
         lib.debug(s)
 
-class m_sendheaders:
+class SendHeaders:
     def __init__(self):
         pass
 
@@ -194,12 +194,12 @@ class m_sendheaders:
 
     @staticmethod
     def load(data):
-        return m_sendheaders()
+        return SendHeaders()
 
     def debug(self):
         lib.debug("<sendheaders> no extra data\n")
 
-class m_sendcmpct:
+class SendCmpct:
     def __init__(self, n1, n2):
         self.n1 = n1
         self.n2 = n2
@@ -210,12 +210,12 @@ class m_sendcmpct:
     @staticmethod
     def load(data):
         (n1, n2) = struct.unpack("<BQ", data)
-        return m_sendcmpct(n1, n2)
+        return SendCmpct(n1, n2)
 
     def debug(self):
         lib.debug("<sendcmpct>\nn1: {}\nn2:{}\n", self.n1, self.n2)
 
-class m_reject:
+class Reject:
     def __init__(self, message, ccode, reason, data):
         self.message = message
         self.ccode = ccode
@@ -227,19 +227,19 @@ class m_reject:
 
     @staticmethod
     def load(data):
-        (message, size) = s_var_str.load(data)
+        (message, size) = VarStr.load(data)
         data = data[size:]
 
         (ccode, ) = struct.unpack("<B", data[:1])
 
-        (reason, size) = s_var_str.load(data)
+        (reason, size) = VarStr.load(data)
         data = data[size:]
-        return m_reject(message, ccode, reason, data)
+        return Reject(message, ccode, reason, data)
 
     def debug(self):
         lib.debug("<reject>\nmessage:{}\nccode:{}\nreason:{}\ndata:{}\n", self.message, self.ccode, self.reason, self.data)
 
-class m_feefilter:
+class FeeFilter:
     def __init__(self, feerate):
         self.feerate = feerate
 
@@ -249,7 +249,7 @@ class m_feefilter:
     @staticmethod
     def load(data):
         (feerate, ) = struct.unpack("<Q", data)
-        return m_feefilter(feerate)
+        return FeeFilter(feerate)
 
     def debug(self):
         lib.debug("<feefilter>\nfeerate:{}\n", self.feerate)

@@ -1,5 +1,5 @@
-from bitcoin import bitcoin
+from bitcoin import BitCoin
 
 if __name__ == "__main__":
-    bc = bitcoin()
+    bc = BitCoin()
     bc.run()
