@@ -1,5 +1,3 @@
-# coding=utf-8
-
 import socket
 import struct
 import time
@@ -240,3 +238,18 @@ class m_reject:
 
     def debug(self):
         lib.debug("<reject>\nmessage:{}\nccode:{}\nreason:{}\ndata:{}\n".format(self.message, self.ccode, self.reason, self.data))
+
+class m_feefilter:
+    def __init__(self, feerate):
+        self.feerate = feerate
+
+    def tobytes(self):
+        pass
+
+    @staticmethod
+    def load(data):
+        (feerate, ) = struct.unpack("<Q", data)
+        return m_feefilter(feerate)
+
+    def debug(self):
+        lib.debug("<feefilter>\nfeerate:{}\n".format(self.feerate))

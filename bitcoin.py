@@ -1,5 +1,3 @@
-# coding=utf-8
-
 import socket
 import config
 from structs import *
@@ -12,7 +10,7 @@ class bitcoin():
         self.slicedmsg = b""
 
     def run(self):
-        msg = s_message("version", m_version(1).tobytes())
+        msg = s_message("version", m_version(0).tobytes())
         self.send(msg)
 
         for i in range(5):

@@ -1,5 +1,3 @@
-# coding=utf-8
-
 from bitcoin import bitcoin
 
 if __name__ == "__main__":
