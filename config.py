@@ -1,4 +1,5 @@
 magic = 0xD9B4BEF9
+listen_port = 8333
 #seed_addr = ("14.192.8.27", 21301)
 seed_addr = ("13.80.67.162", 8333)
 version = 70015

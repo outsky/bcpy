@@ -5,52 +5,63 @@ from structs import *
 from messages import *
 import lib
 
-class bitcoin():
+class node:
+    def __init__(self, sock):
+        self.sock = sock
+
+class bitcoin:
     def __init__(self):
+        self.nodes = {}
+
         self.sel = selectors.DefaultSelector()
-        self.sock_listen(8333)
+        self.listensock = self.sock_listen(config.listen_port)
         self.sock_connect(config.seed_addr)
 
         self.slicedmsg = b""
 
-    def sock_accept(self, sock, mask):
+    def sock_accept(self, sock):
         conn, addr = sock.accept()
         conn.setblocking(False)
         self.sel.register(conn, selectors.EVENT_READ, self.sock_read)
-        lib.info("new connection: {}({})", addr, conn)
+        fd = conn.fileno()
+        self.nodes[fd] = node(conn)
+        lib.info("new connection: {}({})", addr, fd)
 
-    def sock_read(self, conn, mask):
-        data = conn.recv(4096)
+    def sock_read(self, sock):
+        data = sock.recv(4096)
+        fd = sock.fileno()
         if data:
-            self.on_recv(data)
+            self.on_recv(fd, data)
         else:
-            lib.info("disconnect: {}", conn)
-            self.sel.unregister(conn)
-            conn.close()
+            lib.info("disconnect: {}", fd)
+            self.sel.unregister(sock)
+            sock.close()
 
     def sock_connect(self, addr):
-        self.sock = socket.create_connection(addr)
-        self.sel.register(self.sock, selectors.EVENT_READ, self.sock_read)
-        lib.info("connect to: {}", addr)
+        sock = socket.create_connection(addr)
+        self.sel.register(sock, selectors.EVENT_READ, self.sock_read)
+        fd = sock.fileno()
+        self.nodes[fd] = node(sock)
+        lib.info("connect to: {}({})", addr, fd)
+        msg = s_message("version", m_version(0).tobytes())
+        self.send(fd, msg)
 
     def sock_listen(self, port):
-        self.listensock = socket.socket()
-        self.listensock.bind(("localhost", port))
-        self.listensock.listen()
-        self.listensock.setblocking(False)
-        self.sel.register(self.listensock, selectors.EVENT_READ, self.sock_accept)
+        sock = socket.socket()
+        sock.bind(("localhost", port))
+        sock.listen()
+        sock.setblocking(False)
+        self.sel.register(sock, selectors.EVENT_READ, self.sock_accept)
+        return sock
 
     def run(self):
-        msg = s_message("version", m_version(0).tobytes())
-        self.send(msg)
-
         while True:
             events = self.sel.select()
-            for key, mask in events:
+            for key, _ in events:
                 callback = key.data
-                callback(key.fileobj, mask)
+                callback(key.fileobj)
 
-    def on_recv(self, data):
+    def on_recv(self, fd, data):
         if self.slicedmsg and len(self.slicedmsg) > 0:
             data = self.slicedmsg + data
         while True:
@@ -59,14 +70,15 @@ class bitcoin():
             (msg, data, self.slicedmsg) = s_message.load(data)
             if not msg:
                 break
-            self.handle(msg)
+            self.handle(fd, msg)
 
-    def send(self, msg):
+    def send(self, fd, msg):
+        node = self.nodes[fd]
         data = msg.tobytes()
-        sent = self.sock.send(data)
+        sent = node.sock.send(data)
         lib.info("-> {}:{}/{}", msg.command, sent, len(data))
 
-    def handle(self, msg):
+    def handle(self, fd, msg):
         msgtypes = ["version", "verack", "addr", "inv", "getdata", "notfound", "getblocks",
             "getheaders", "tx", "block", "headers", "getaddr", "mempool", "checkorder",
             "submitorder", "reply", "ping", "pong", "reject", "filterload", "fileteradd",
@@ -91,101 +103,101 @@ class bitcoin():
                 payload = globals()[clsname].load(msg.payload)
                 if config.debug_enabled:
                     payload.debug()
-                return handler(payload)
+                return handler(fd, payload)
         lib.err("unknown command: <{}>", msg.command)
 
-    def handle_version(self, payload):
+    def handle_version(self, fd, payload):
         msg = s_message("verack", m_verack().tobytes())
-        self.send(msg)
+        self.send(fd, msg)
 
-    def handle_verack(self, payload):
+    def handle_verack(self, fd, payload):
         #msg = s_message("getaddr", m_getaddr().tobytes())
-        #self.send(msg)
+        #self.send(fd, msg)
         pass
 
-    def handle_addr(self, payload):
+    def handle_addr(self, fd, payload):
         # do nothing
         pass
 
-    def handle_inv(self, payload):
+    def handle_inv(self, fd, payload):
         pass
 
-    def handle_getdata(self, payload):
+    def handle_getdata(self, fd, payload):
         pass
 
-    def handle_notfound(self, payload):
+    def handle_notfound(self, fd, payload):
         pass
 
-    def handle_getblocks(self, payload):
+    def handle_getblocks(self, fd, payload):
         pass
 
-    def handle_getheaders(self, payload):
+    def handle_getheaders(self, fd, payload):
         # do nothing
         pass
 
-    def handle_tx(self, payload):
+    def handle_tx(self, fd, payload):
         pass
 
-    def handle_block(self, payload):
+    def handle_block(self, fd, payload):
         pass
 
-    def handle_headers(self, payload):
+    def handle_headers(self, fd, payload):
         pass
 
-    def handle_getaddr(self, payload):
+    def handle_getaddr(self, fd, payload):
         pass
  
-    def handle_mempool(self, payload):
+    def handle_mempool(self, fd, payload):
         pass
 
-    def handle_checkorder(self, payload):
+    def handle_checkorder(self, fd, payload):
         pass
 
-    def handle_submitorder(self, payload):
+    def handle_submitorder(self, fd, payload):
         pass
 
-    def handle_reply(self, payload):
+    def handle_reply(self, fd, payload):
         pass
 
-    def handle_ping(self, payload):
+    def handle_ping(self, fd, payload):
         msg = s_message("pong", m_pong(payload.nonce).tobytes())
-        self.send(msg)
+        self.send(fd, msg)
 
-    def handle_pong(self, payload):
+    def handle_pong(self, fd, payload):
         pass
 
-    def handle_reject(self, payload):
+    def handle_reject(self, fd, payload):
         pass
 
-    def handle_filterload(self, payload):
+    def handle_filterload(self, fd, payload):
         pass
 
-    def handle_fileteradd(self, payload):
+    def handle_fileteradd(self, fd, payload):
         pass
 
-    def handle_filterclear(self, payload):
+    def handle_filterclear(self, fd, payload):
         pass
 
-    def handle_merkleblock(self, payload):
+    def handle_merkleblock(self, fd, payload):
         pass
 
-    def handle_alert(self, payload):
+    def handle_alert(self, fd, payload):
         pass
 
-    def handle_sendheaders(self, payload):
+    def handle_sendheaders(self, fd, payload):
         pass
 
-    def handle_feefilter(self, payload):
+    def handle_feefilter(self, fd, payload):
         pass
 
-    def handle_sendcmpct(self, payload):
+    def handle_sendcmpct(self, fd, payload):
         pass
 
-    def handle_cmpctblock(self, payload):
+    def handle_cmpctblock(self, fd, payload):
         pass
 
-    def handle_getblocktxn(self, payload):
+    def handle_getblocktxn(self, fd, payload):
         pass
 
-    def handle_blocktxn(self, payload):
+    def handle_blocktxn(self, fd, payload):
         pass
