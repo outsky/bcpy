@@ -25,7 +25,7 @@ class Message:
         payload = data[:length]
         data = data[length:]
 
-        command = command.decode("utf-8").rstrip(b'\x00'.decode("utf-8"))
+        command = command.decode("utf-8").rstrip("\x00")
         msg = Message(command, payload, magic)
         if checksum != msg.checksum:
             lib.err("<{}> checksum failed: {}, {}", command, checksum, msg.checksum)

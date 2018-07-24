@@ -8,5 +8,4 @@ user_agent = b"/Satoshi:0.7.2/"
 relay = True
 addr = bytes.fromhex('0000 0000 0000 0000 0000 ffff 0000 0000 0000')
 
-
 debug_enabled = True
