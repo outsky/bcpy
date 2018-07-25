@@ -12,12 +12,12 @@ class Node:
 class BitCoin:
     def __init__(self):
         self.nodes = {}
+        self.slicedmsg = b""
 
         self.sel = selectors.DefaultSelector()
         self.listensock = self.sock_listen(config.listen_port)
         self.sock_connect(config.seed_addr)
 
-        self.slicedmsg = b""
 
     def sock_accept(self, sock):
         conn, addr = sock.accept()
@@ -56,10 +56,8 @@ class BitCoin:
 
     def run(self):
         while True:
-            events = self.sel.select()
-            for key, _ in events:
-                callback = key.data
-                callback(key.fileobj)
+            for key, _ in self.sel.select():
+                key.data(key.fileobj)
 
     def on_recv(self, fd, data):
         if self.slicedmsg and len(self.slicedmsg) > 0:
