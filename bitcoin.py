@@ -4,6 +4,7 @@ import config
 from structs import *
 from messages import *
 import lib
+from db import DataBase
 
 class Node:
     def __init__(self, sock, debug = False):
@@ -22,6 +23,7 @@ class Node:
 class BitCoin:
     def __init__(self):
         self.nodes = {}
+        self.db = DataBase(config.db_name)
 
         self.sel = selectors.DefaultSelector()
         self.sock_listen(config.listen_port)
