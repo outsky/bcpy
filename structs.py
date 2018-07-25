@@ -9,7 +9,7 @@ class Message:
         self.command = command
         self.payload = payload
         self.length = len(self.payload)
-        self.checksum = hashlib.sha256(hashlib.sha256(self.payload).digest()).digest()[:4]
+        self.checksum = lib.double_hash(self.payload)[:4]
 
     @staticmethod
     # ret: (msg, data, slicedmsg)

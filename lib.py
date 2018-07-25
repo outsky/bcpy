@@ -1,5 +1,6 @@
 import random
 import config
+import hashlib
 
 def printb(bs):
     col = 0
@@ -39,3 +40,6 @@ def debug(fmt, *args):
 
 def random64():
 	return random.randint(1, 1000000000)
+
+def double_hash(v):
+	return hashlib.sha256(hashlib.sha256(v).digest()).digest()
