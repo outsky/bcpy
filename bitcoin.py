@@ -6,26 +6,34 @@ from messages import *
 import lib
 
 class Node:
-    def __init__(self, sock):
+    def __init__(self, sock, debug = False):
         self.sock = sock
         self.slicedmsg = b""
+        self.debug = debug # debug node
+
+    def __str__(self):
+        return "sock: {}\ndebug: {}".format(self.sock, self.debug)
 
 class BitCoin:
     def __init__(self):
         self.nodes = {}
 
         self.sel = selectors.DefaultSelector()
-        self.listensock = self.sock_listen(config.listen_port)
+        self.sock_listen(config.listen_port)
+        self.sock_listen(config.debug_port)
         self.sock_connect(config.seed_addr)
-
 
     def sock_accept(self, sock):
         conn, addr = sock.accept()
         conn.setblocking(False)
         self.sel.register(conn, selectors.EVENT_READ, self.sock_read)
+
+        _, port = conn.getsockname()
+        debug = port == config.debug_port
+
         fd = conn.fileno()
-        self.nodes[fd] = Node(conn)
-        lib.info("new connection: {}({})", addr, fd)
+        self.nodes[fd] = Node(conn, debug)
+        lib.info("new connection: {}({}), debug: {}", addr, fd, debug)
 
     def sock_read(self, sock):
         data = sock.recv(4096)
@@ -44,7 +52,7 @@ class BitCoin:
         self.nodes[fd] = Node(sock)
         lib.info("connect to: {}({})", addr, fd)
         msg = Message("version", Version(0).tobytes())
-        self.send(fd, msg)
+        self.send_msg(fd, msg)
 
     def sock_listen(self, port):
         sock = socket.socket()
@@ -52,7 +60,6 @@ class BitCoin:
         sock.listen()
         sock.setblocking(False)
         self.sel.register(sock, selectors.EVENT_READ, self.sock_accept)
-        return sock
 
     def run(self):
         while True:
@@ -66,12 +73,34 @@ class BitCoin:
         while True:
             if not data or len(data) <= 0:
                 break
-            (msg, data, node.slicedmsg) = Message.load(data)
-            if not msg:
-                break
-            self.handle(fd, msg)
 
-    def send(self, fd, msg):
+            if node.debug:
+                vs, size = VarStr.load(data)
+                data = data[size:]
+                self.debug(fd, vs.string.decode("utf-8"))
+            else:
+                (msg, data, node.slicedmsg) = Message.load(data)
+                if not msg:
+                    break
+                self.handle(fd, msg)
+
+    def debug(self, fd, cmd):
+        lib.info("dbg: {}\n", cmd)
+        handler = getattr(self, "debug_" + cmd, None)
+        if not handler:
+            err = "unknown debug cmd <{}>".format(cmd)
+            lib.err(err)
+            self.send_debug_msg(fd, err)
+            return
+        handler(fd)
+
+    def send_debug_msg(self, fd, string):
+        node = self.nodes[fd]
+        data = VarStr(string.encode("utf-8")).tobytes()
+        sent = node.sock.send(data)
+        lib.info("-> dbg:{}/{}", sent, len(data))
+
+    def send_msg(self, fd, msg):
         node = self.nodes[fd]
         data = msg.tobytes()
         sent = node.sock.send(data)
@@ -111,11 +140,11 @@ class BitCoin:
 
     def handle_Version(self, fd, payload):
         msg = Message("verack", VerAck().tobytes())
-        self.send(fd, msg)
+        self.send_msg(fd, msg)
 
     def handle_VerAck(self, fd, payload):
         #msg = Message("getaddr", GetAddr().tobytes())
-        #self.send(fd, msg)
+        #self.send_msg(fd, msg)
         pass
 
     def handle_Addr(self, fd, payload):
@@ -164,7 +193,7 @@ class BitCoin:
 
     def handle_Ping(self, fd, payload):
         msg = Message("pong", Pong(payload.nonce).tobytes())
-        self.send(fd, msg)
+        self.send_msg(fd, msg)
 
     def handle_Pong(self, fd, payload):
         pass
@@ -204,3 +233,10 @@ class BitCoin:
 
     def handle_BlockTxn(self, fd, payload):
         pass
+
+    # debug handlers
+    def debug_nodes(self, fd):
+        msg = ""
+        for k, v in self.nodes.items():
+            msg += "{}:\n{}\n".format(k, v)
+        self.send_debug_msg(fd, msg)

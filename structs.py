@@ -61,25 +61,33 @@ class VarInt:
         return (VarInt(value), size)
 
     def tobytes(self):
-        pass # TODO:
+        if self.value < 0xFD:
+            return struct.pack("<B", self.value), 1
+        elif self.value <= 0xFFFF:
+            return b'\xFD' + struct.pack("<H", self.value), 3
+        elif self.value <= 0xFFFFFFFF:
+            return b'\xFE' + struct.pack("<I", self.value), 5
+        else:
+            return b'\xFF' + struct.pack("<Q", self.value), 9
 
 class VarStr:
-    def __init__(self, length, string):
-        self.length = length
-        self.string = string
+    def __init__(self, string):
+        self.string = string # bytes
 
     @staticmethod
     def load(data):
         (varint, size) = VarInt.load(data)
         data = data[size:]
         string = data[:varint.value]
-        return (VarStr(varint.value, string), size + varint.value)
+        return (VarStr(string), size + varint.value)
 
     def tobytes(self):
-        pass
+        vi = VarInt(len(self.string))
+        vib, _ = vi.tobytes()
+        return vib + self.string
 
     def __str__(self):
-        return "{}({})".format(self.string, self.length)
+        return "{}({})".format(self.string, len(self.string))
 
 class NetAddr:
     def __init__(self, time, services, ip, port):
