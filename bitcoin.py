@@ -95,7 +95,7 @@ class BitCoin:
             return
 
         clsname = msgtypes[cmd]
-        handler = getattr(self, "On" + clsname, None)
+        handler = getattr(self, "handle_" + clsname, None)
         if not handler:
             lib.err("no handler for <{}, {}>", cmd, clsname)
             return
@@ -110,98 +110,98 @@ class BitCoin:
             payload.debug()
         return handler(fd, payload)
 
-    def OnVersion(self, fd, payload):
+    def handle_Version(self, fd, payload):
         msg = Message("verack", VerAck().tobytes())
         self.send(fd, msg)
 
-    def OnVerAck(self, fd, payload):
+    def handle_VerAck(self, fd, payload):
         #msg = Message("getaddr", GetAddr().tobytes())
         #self.send(fd, msg)
         pass
 
-    def OnAddr(self, fd, payload):
+    def handle_Addr(self, fd, payload):
         # do nothing
         pass
 
-    def OnInv(self, fd, payload):
+    def handle_Inv(self, fd, payload):
         pass
 
-    def OnGetData(self, fd, payload):
+    def handle_GetData(self, fd, payload):
         pass
 
-    def OnNotFound(self, fd, payload):
+    def handle_NotFound(self, fd, payload):
         pass
 
-    def OnGetBlocks(self, fd, payload):
+    def handle_GetBlocks(self, fd, payload):
         pass
 
-    def OnGetHeaders(self, fd, payload):
+    def handle_GetHeaders(self, fd, payload):
         # do nothing
         pass
 
-    def OnTx(self, fd, payload):
+    def handle_Tx(self, fd, payload):
         pass
 
-    def OnBlock(self, fd, payload):
+    def handle_Block(self, fd, payload):
         pass
 
-    def OnHeaders(self, fd, payload):
+    def handle_Headers(self, fd, payload):
         pass
 
-    def OnGetAddr(self, fd, payload):
+    def handle_GetAddr(self, fd, payload):
         pass
  
-    def OnMemPool(self, fd, payload):
+    def handle_MemPool(self, fd, payload):
         pass
 
-    def OnCheckOrder(self, fd, payload):
+    def handle_CheckOrder(self, fd, payload):
         pass
 
-    def OnSubmitOrder(self, fd, payload):
+    def handle_SubmitOrder(self, fd, payload):
         pass
 
-    def OnReply(self, fd, payload):
+    def handle_Reply(self, fd, payload):
         pass
 
-    def OnPing(self, fd, payload):
+    def handle_Ping(self, fd, payload):
         msg = Message("pong", Pong(payload.nonce).tobytes())
         self.send(fd, msg)
 
-    def OnPong(self, fd, payload):
+    def handle_Pong(self, fd, payload):
         pass
 
-    def OnReject(self, fd, payload):
+    def handle_Reject(self, fd, payload):
         pass
 
-    def OnFilterLoad(self, fd, payload):
+    def handle_FilterLoad(self, fd, payload):
         pass
 
-    def OnFileterAdd(self, fd, payload):
+    def handle_FileterAdd(self, fd, payload):
         pass
 
-    def OnFilterClear(self, fd, payload):
+    def handle_FilterClear(self, fd, payload):
         pass
 
-    def OnMerkleBlock(self, fd, payload):
+    def handle_MerkleBlock(self, fd, payload):
         pass
 
-    def OnAlert(self, fd, payload):
+    def handle_Alert(self, fd, payload):
         pass
 
-    def OnSendHeaders(self, fd, payload):
+    def handle_SendHeaders(self, fd, payload):
         pass
 
-    def OnFeeFilter(self, fd, payload):
+    def handle_FeeFilter(self, fd, payload):
         pass
 
-    def OnSendCmpct(self, fd, payload):
+    def handle_SendCmpct(self, fd, payload):
         pass
 
-    def OnCmpctBlock(self, fd, payload):
+    def handle_CmpctBlock(self, fd, payload):
         pass
 
-    def OnGetBlockTxn(self, fd, payload):
+    def handle_GetBlockTxn(self, fd, payload):
         pass
 
-    def OnBlockTxn(self, fd, payload):
+    def handle_BlockTxn(self, fd, payload):
         pass
