@@ -8,11 +8,11 @@ import lib
 class Node:
     def __init__(self, sock):
         self.sock = sock
+        self.slicedmsg = b""
 
 class BitCoin:
     def __init__(self):
         self.nodes = {}
-        self.slicedmsg = b""
 
         self.sel = selectors.DefaultSelector()
         self.listensock = self.sock_listen(config.listen_port)
@@ -60,12 +60,13 @@ class BitCoin:
                 key.data(key.fileobj)
 
     def on_recv(self, fd, data):
-        if self.slicedmsg and len(self.slicedmsg) > 0:
-            data = self.slicedmsg + data
+        node = self.nodes[fd]
+        if node.slicedmsg and len(node.slicedmsg) > 0:
+            data = node.slicedmsg + data
         while True:
             if not data or len(data) <= 0:
                 break
-            (msg, data, self.slicedmsg) = Message.load(data)
+            (msg, data, node.slicedmsg) = Message.load(data)
             if not msg:
                 break
             self.handle(fd, msg)
