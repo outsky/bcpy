@@ -62,13 +62,13 @@ class VarInt:
 
     def tobytes(self):
         if self.value < 0xFD:
-            return struct.pack("<B", self.value), 1
+            return struct.pack("<B", self.value)
         elif self.value <= 0xFFFF:
-            return b'\xFD' + struct.pack("<H", self.value), 3
+            return b'\xFD' + struct.pack("<H", self.value)
         elif self.value <= 0xFFFFFFFF:
-            return b'\xFE' + struct.pack("<I", self.value), 5
+            return b'\xFE' + struct.pack("<I", self.value)
         else:
-            return b'\xFF' + struct.pack("<Q", self.value), 9
+            return b'\xFF' + struct.pack("<Q", self.value)
 
 class VarStr:
     def __init__(self, string):

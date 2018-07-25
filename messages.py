@@ -107,17 +107,20 @@ class Addr:
         self.addr_list = addr_list
 
     def tobytes(self):
-        pass
+        ret = VarInt(len(self.addr_list)).tobytes()
+        for addr in self.addr_list:
+            ret += addr.tobytes()
+        return ret
 
     @staticmethod
     def load(data):
-        (varint, size) = VarInt.load(data)
+        varint, size = VarInt.load(data)
         data = data[size:]
         count = varint.value
 
         addr_list = []
         for i in range(count):
-            (addr, size) = NetAddr.load(data)
+            addr, size = NetAddr.load(data)
             data = data[size:]
             addr_list.append(addr)
         return Addr(addr_list)

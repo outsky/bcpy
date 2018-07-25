@@ -10,9 +10,14 @@ class Node:
         self.sock = sock
         self.slicedmsg = b""
         self.debug = debug # debug node
+        self.version = 0
+        self.services = 0
+        self.user_agent = ""
+        self.start_height = 0
 
     def __str__(self):
-        return "sock: {}\ndebug: {}".format(self.sock, self.debug)
+        return "sock: {}\ndebug: {}\nversion: {}\nservices: {}\nuser agent: {}\nstart height: {}\n".format(
+            self.sock, self.debug, self.version, self.services, self.user_agent, self.start_height)
 
 class BitCoin:
     def __init__(self):
@@ -139,12 +144,23 @@ class BitCoin:
         return handler(fd, payload)
 
     def handle_Version(self, fd, payload):
+        node = self.nodes[fd]
+        node.version = payload.version
+        node.services = payload.services
+        node.user_agent = payload.user_agent
+        node.start_height = payload.start_height
+
         msg = Message("verack", VerAck().tobytes())
         self.send_msg(fd, msg)
 
     def handle_VerAck(self, fd, payload):
-        #msg = Message("getaddr", GetAddr().tobytes())
-        #self.send_msg(fd, msg)
+        node = self.nodes[fd]
+        ip, _ = node.sock.getsockname()
+        msg = Message("addr", Addr([NetAddr(int(time.time()), config.services, socket.inet_pton(node.sock.family, ip), config.listen_port)]).tobytes())
+        self.send_msg(fd, msg)
+
+        msg = Message("getaddr", GetAddr().tobytes())
+        self.send_msg(fd, msg)
         pass
 
     def handle_Addr(self, fd, payload):
