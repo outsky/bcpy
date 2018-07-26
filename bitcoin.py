@@ -24,11 +24,49 @@ class BitCoin:
     def __init__(self):
         self.nodes = {}
         self.db = DataBase(config.db_name)
+        if len(self.db.keys()) <= 0:
+            if not self.create_genesis_block():
+                exit()
 
         self.sel = selectors.DefaultSelector()
         self.sock_listen(config.listen_port)
         self.sock_listen(config.debug_port)
         self.sock_connect(config.seed_addr)
+
+    def create_genesis_block(self):
+        txin = []
+        prev = OutPoint(b"", 0xFFFFFFFF)
+        script = VarInt(486604799).tobytes() + VarInt(4).tobytes() + VarStr(b"The Times 03/Jan/2009 Chancellor on brink of second bailout for banks").tobytes()
+        txin.append(TxIn(prev, VarStr(script), 0xFFFFFFFF))
+
+#        lib.printb(TxIn(prev, VarStr(script), 0xFFFFFFFF).tobytes())
+        lib.printb(script)
+        return False
+
+        txout = []
+        script = VarStr(lib.hexstr2bytes("04678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38c4f35504e51ec112de5c384df7ba0b8d578a4c702b6bf11d5f")).tobytes() + struct.pack("<B", 0xAC)
+        txout.append(TxOut(50 * config.coin, VarStr(script)))
+
+        txs = []
+        txs.append(Tx(1, 0, txin, txout, [], 0))
+
+        merkle = lib.merkle_root(txs)
+        if merkle != lib.hexstr2bytes("4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b"):
+            lib.err("create genesis block failed: merkle root err {}", merkle.hex())
+            #return False
+
+        header = BlockHeader(1, b"", merkle, 1231006505, 0x1d00ffff, 2083236893)
+        key = lib.double_hash(header.tobytes())
+        if key != lib.hexstr2bytes("0x000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f"):
+            lib.err("create genesis block failed: hash err {}", key.hex())
+            #return False
+
+        b = Block(header, txs)
+        lib.printb(b.tobytes())
+        #self.db.add(key, b.tobytes())
+        lib.debug("genesis block created")
+        #return True
+        return False
 
     def sock_accept(self, sock):
         conn, addr = sock.accept()

@@ -12,3 +12,4 @@ addr = bytes.fromhex('0000 0000 0000 0000 0000 ffff 0000 0000 0000')
 debug_enabled = True
 
 db_name = ".bitcoin.db"
+coin = 100000000

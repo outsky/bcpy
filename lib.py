@@ -16,6 +16,11 @@ def printb(bs):
             print(" ", end = '')
     print("")
 
+def hexstr2bytes(hex):
+	if hex[:2] == "0x":
+		hex = hex[2:]
+	return bytes.fromhex(hex)
+
 def err(fmt, *args):
 	fmt = "[x] " + fmt
 	if not args:
@@ -43,3 +48,18 @@ def random64():
 
 def double_hash(v):
 	return hashlib.sha256(hashlib.sha256(v).digest()).digest()
+
+def _merkle_root(nodes):
+	nodes = [double_hash(node)[::-1] for node in nodes]
+	while len(nodes) > 1:
+		if len(nodes) % 2 != 0:
+			nodes.append(nodes[-1])
+		nodes = [double_hash(nodes[2 * i] + nodes[2 * i + 1]) for i in range(len(nodes) // 2)]
+	return nodes[0][::-1]
+
+def merkle_root(txs):
+	if len(txs) <= 0:
+		return b""
+
+	nodes = [tx.tobytes() for tx in txs]
+	return _merkle_root(nodes)

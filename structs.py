@@ -36,6 +36,17 @@ class Message:
         return struct.pack("<I12sI4s{}s".format(self.length), self.magic, self.command.encode("utf-8"),
             self.length, self.checksum, self.payload)
 
+# 1st byte: size
+class CompressInt:
+    def __init__(self, value):
+        self.value = value
+
+    @staticmethod
+    def load(data):
+        pass
+
+    def tobytes(self):
+        pass
 
 class VarInt:
     def __init__(self, value):
@@ -76,14 +87,14 @@ class VarStr:
 
     @staticmethod
     def load(data):
-        (varint, size) = VarInt.load(data)
+        varint, size = VarInt.load(data)
         data = data[size:]
         string = data[:varint.value]
         return (VarStr(string), size + varint.value)
 
     def tobytes(self):
         vi = VarInt(len(self.string))
-        vib, _ = vi.tobytes()
+        vib = vi.tobytes()
         return vib + self.string
 
     def __str__(self):
@@ -121,12 +132,142 @@ class InvVect:
     @staticmethod
     def load(data):
         size = 36
-        (type, hash) = struct.unpack("<I32s", data[:size])
+        type, hash = struct.unpack("<I32s", data[:size])
         return (InvVect(type, hash), size)
 
     def tobytes(self):
         pass
 
-class BlockHeaders:
-    pass
+class BlockHeader:
+    def __init__(self, version, prev, merkle, timestamp, bits, nonce):
+        self.version = version
+        self.prev = prev
+        self.merkle = merkle
+        self.timestamp = timestamp
+        self.bits = bits
+        self.nonce = nonce
 
+    @staticmethod
+    def load(data):
+        version, prev, merkle, timestamp, bits, nonce = struct.unpack("<i32s32sIII", data[:80])
+        data = data[80:]
+        vi, size = VarInt.load(data)
+        return (BlockHeader(version, prev, merkle, timestamp, bits, nonce, vi.value), 80 + size)
+
+    def tobytes(self):
+        return struct.pack("<i32s32sIII", self.version, self.prev, self.merkle, self.timestamp, 
+            self.bits, self.nonce)
+
+class Block:
+    def __init__(self, header, txs):
+        self.header = header
+        self.txs = txs
+
+    @staticmethod
+    def load(data):
+        totalsize = 0
+        (size, ) = struct.unpack("<I", data[:4])
+        totalsize += 4
+        data = data[4:]
+
+        header, size = BlockHeader.load(data)
+        totalsize += size
+        data = data[size:]
+
+        vi, size = VarInt.load(data)
+        totalsize += size
+        data = data[size:]
+
+        txs = []
+        for _ in range(vi.value):
+            tx, size = Tx.load(data)
+            totalsize += size
+            data = data[size:]
+            txs.append(tx)
+
+        return (Block(header, txs), totalsize)
+
+    def tobytes(self):
+        ret = self.header.tobytes()
+        ret += VarInt(len(self.txs)).tobytes()
+        for tx in self.txs:
+            ret += tx.tobytes()
+        return ret
+
+class TxIn:
+    def __init__(self, prev, script, sequence):
+        self.prev = prev
+        self.script = script
+        self.sequence = sequence
+
+    @staticmethod
+    def load(data):
+        totalsize = 0
+        prev, size = OutPoint.load(data)
+        totalsize += size
+        data = data[size:]
+
+        script, size = VarStr.load(data)
+        totalsize += size
+        data = data[size:]
+
+        sequence = struct.unpack("<I", data[:4])
+        totalsize += 4
+        return (TxIn(prev, script, sequence), totalsize)
+
+    def tobytes(self):
+        return self.prev.tobytes() + self.script.tobytes() + struct.pack("<I", self.sequence)
+
+class TxOut:
+    def __init__(self, value, script):
+        self.value = value
+        self.script = script
+
+    @staticmethod
+    def load(data):
+        (value, ) = struct.unpack("<Q", data[:8])
+        data = data[8:]
+
+        vs, size = VarStr.load(data)
+        return (TxOut(value, vs), 8 + size)
+
+    def tobytes(self):
+        return struct.pack("<Q", self.value) + self.script.tobytes()
+
+class OutPoint:
+    def __init__(self, hash, index):
+        self.hash = hash
+        self.index = index
+
+    @staticmethod
+    def load(data):
+        hash, index = struct.unpack("<32sI", data[:36])
+        return (OutPoint(hash, index), 36)
+
+    def tobytes(self):
+        return struct.pack("<32sI", self.hash, self.index)
+
+class Witness:
+    def __init__(self, witnesses):
+        self.witnesses = witnesses
+
+    @staticmethod
+    def load(data):
+        totalsize = 0
+        (vi, size) = VarInt.load(data)
+        totalsize += size
+        data = data[size:]
+
+        witnesses = []
+        for _ in range(vi.value):
+            (vs, size) = VarStr.load(data)
+            totalsize += size
+            data = data[size:]
+            witnesses.append(vs)
+        return (Witness(witnesses), totalsize)
+
+    def tobytes(self):
+        ret = VarInt(len(self.witnesses)).tobytes()
+        for w in self.witnesses:
+            ret += w.tobytes()
+        return ret

@@ -256,3 +256,78 @@ class FeeFilter:
 
     def debug(self):
         lib.debug("<feefilter>\nfeerate:{}\n", self.feerate)
+
+class Tx:
+    def __init__(self, version, flag, txin, txout, witness, locktime):
+        self.version = version
+        self.flag = flag
+        self.txin = txin
+        self.txout = txout
+        self.witness = witness
+        self.locktime = locktime
+
+    @staticmethod
+    def load(data):
+        totalsize = 0
+        (version, ) = struct.unpack("<i", data[:4])
+        totalsize += 4
+        data = data[4:]
+
+        (flag, ) = struct.unpack("<H", data[:2])
+        if flag == 1:
+            totalsize += 2
+            data = data[2:]
+        else:
+            flag = 0
+
+        incount, size = VarInt.load(data)
+        totalsize += size
+        data = data[size:]
+
+        ins = []
+        for _ in range(incount.value):
+            txin, size = TxIn.load(data)
+            totalsize += size
+            data = data[size:]
+            ins.append(txin)
+
+        outcount, size = VarInt.load(data)
+        totalsize += size
+        data = data[size:]
+
+        outs = []
+        for _ in range(outcount.value):
+            txout, size = TxOut.load(data)
+            totalsize += size
+            data = data[size:]
+            outs.append(txout)
+
+        witness = []
+        if flag > 0:
+            for _ in ins:
+                w, size = Witness.load(data)
+                totalsize += size
+                data = data[size:]
+                witness.append(w)
+
+        locktime = struct.unpack("<I", data[:4])
+        totalsize += 4
+        return (Tx(version, flag, ins, outs, witness, locktime), totalsize)
+
+    def tobytes(self):
+        ret = struct.pack("<i", self.version)
+        if self.flag > 0:
+            ret += struct.pack("<H", self.flag)
+        ret += VarInt(len(self.txin)).tobytes()
+        for tx in self.txin:
+            ret += tx.tobytes()
+        ret += VarInt(len(self.txout)).tobytes()
+        for tx in self.txout:
+            ret += tx.tobytes()
+        for w in self.witness:
+            ret += w.tobytes()
+        ret += struct.pack("<I", self.locktime)
+        return ret
+
+    def debug(self):
+        lib.debug("<tx>\nversion: {}\nflag: {}\nlocktime: {}\n", self.version, self.flag, self.locktime)
