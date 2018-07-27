@@ -43,10 +43,32 @@ class CompressInt:
 
     @staticmethod
     def load(data):
-        pass
+        (n, ) = struct.unpack("<B", data[:1])
+        value = 0
+        size = 0
+        if n == 1:
+            (value, ) = struct.unpack("<B", data[1:2])
+            size = 2
+        elif n == 2:
+            (value, ) = struct.unpack("<H", data[1:3])
+            size = 3
+        elif n == 4:
+            (value, ) = struct.unpack("<I", data[1:5])
+            size = 5
+        elif n == 8:
+            (value, ) = struct.unpack("<Q", data[1:9])
+            size = 9
+        return (CompressInt(value), size)
 
     def tobytes(self):
-        pass
+        if self.value < 0xFD:
+            return b'\x01' + struct.pack("<B", self.value)
+        elif self.value <= 0xFFFF:
+            return b'\x02' + struct.pack("<H", self.value)
+        elif self.value <= 0xFFFFFFFF:
+            return b'\x04' + struct.pack("<I", self.value)
+        else:
+            return b'\x08' + struct.pack("<Q", self.value)
 
 class VarInt:
     def __init__(self, value):

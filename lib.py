@@ -8,7 +8,8 @@ def printb(bs):
         print("%.2X" % b, end = '')
         col += 1
         if col == 8:
-            print("  ", end = '')
+            #print("  ", end = '')
+            print(" ", end = '')
         elif col == 16:
             col = 0
             print("")
@@ -48,6 +49,9 @@ def random64():
 
 def double_hash(v):
 	return hashlib.sha256(hashlib.sha256(v).digest()).digest()
+
+def single_hash(v):
+	return hashlib.sha256(v).digest()
 
 def _merkle_root(nodes):
 	nodes = [double_hash(node)[::-1] for node in nodes]
