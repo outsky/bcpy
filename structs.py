@@ -173,8 +173,7 @@ class BlockHeader:
     def load(data):
         version, prev, merkle, timestamp, bits, nonce = struct.unpack("<i32s32sIII", data[:80])
         data = data[80:]
-        vi, size = VarInt.load(data)
-        return (BlockHeader(version, prev, merkle, timestamp, bits, nonce, vi.value), 80 + size)
+        return (BlockHeader(version, prev, merkle, timestamp, bits, nonce), 80)
 
     def tobytes(self):
         return struct.pack("<i32s32sIII", self.version, self.prev, self.merkle, self.timestamp, 
